@@ -1,0 +1,11 @@
+# Workflow manager folders
+.nextflow*
+work/
+
+# Data and results (Should stay local)
+data/
+results/
+*.fastq
+*.bam
+*.vcf
+*.tar.gz
