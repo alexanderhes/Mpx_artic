@@ -328,9 +328,16 @@ set -u
 
 set_status "Activated NEXTFLOW conda environment"
 
-echo "Starting Nextflow pipeline..."
-# Pointing to the NEW Final Samplesheet created in Step 4
-nextflow run main.nf --input_dir "$FINAL_SAMPLESHEET"
+# 1. Set the version (usually 'main' during development)
+VERSION="main"
+
+# 2. Tell Nextflow to refresh the code from GitHub
+nextflow pull alexanderhes/Mpx_artic_test -r $VERSION
+
+# 3. Run it directly from the GitHub handle
+nextflow run alexanderhes/Mpx_artic_test -r $VERSION \
+    --input_dir "$FINAL_SAMPLESHEET" 
+
 
 # --- 6. UPLOAD RESULTS ---
 
