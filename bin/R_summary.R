@@ -71,6 +71,13 @@ combined_all <- combined_all %>%
   ) %>% 
   select(
     -fastq, -PrøveNr, -Mapped_Reads_Unnormalized, -Mapped_Percentage_Unnormalized
-  )
+  ) %>%
+  # Adding the Sequence quality logic
+  mutate(`Sequence quality` = case_when(
+    Coverage > 80  ~ "High Quality",
+    Coverage >= 50 & Coverage <= 80 ~ "Medium Quality",
+    Coverage < 50  ~ "Low Quality",
+    TRUE           ~ "Unknown"
+  ))
 
 write_csv(combined_all, options[4])
