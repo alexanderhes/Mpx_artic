@@ -8,7 +8,7 @@ LOGFILE="/home/ngs/mpx_wrapper_error.log"
 
 # Provide a conservative default STATUS_FILE early so very early failures still write somewhere.
 # This will be overwritten with the run-specific file after argument parsing.
-STATUS_FILE="$HOME/hcv_illumina_unknown_status.txt"
+STATUS_FILE="$HOME/mpx_artic_unknown_status.txt"
 printf '[%s] Initialized (unknown run)\n' "$(date +'%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
 
 # Small helper to write status; STATUS_FILE will be updated after args are parsed.
@@ -18,7 +18,7 @@ set_status() {
     # history
     echo "$msg" >> "$LOGFILE"
     # also write to the main wrapper log for completeness
-    echo "$msg" >> /home/ngs/hcv_illumina_wrapper.log
+    echo "$msg" >> /home/ngs/mpx_artic_wrapper.log
     # atomic write of the single-line status file if it's defined
     if [ -n "${STATUS_FILE:-}" ]; then
         tmp="${STATUS_FILE}.tmp"
@@ -51,8 +51,6 @@ trap 'ec=$?;
 
 # --- 1. INITIALIZATION & ARGUMENTS ---
 
-# Activate conda
-source /mnt/tempdata/miniconda3/etc/profile.d/conda.sh
 
 SCRIPT_NAME=$(basename "$0")
 
@@ -133,7 +131,7 @@ cd $HOME
 
 # Set up paths
 BASE_DIR=/mnt/tempdata/
-# TMP_DIR will hold the raw fastq files
+# TMP_DIR will hold the raw fastq files and results
 TMP_DIR=/mnt/tempdata/fastq_mpx/raw/${RUN}
 TMP_RES=/mnt/tempdata/fastq_mpx/analysis/${RUN}
 #MAKE SURE CSV FILE PATH IS PARSED CORRECTLY
@@ -322,7 +320,13 @@ echo "Samplesheet created: $FINAL_SAMPLESHEET"
 # --- 5. RUN PIPELINE ---
 
 # Activate the conda environment that holds Nextflow
+# Temporarily disable set -u because the JAVA_HOME variable is unset
+set +u
+source ~/miniconda3/etc/profile.d/conda.sh
 conda activate NEXTFLOW
+set -u
+
+set_status "Activated NEXTFLOW conda environment"
 
 echo "Starting Nextflow pipeline..."
 # Pointing to the NEW Final Samplesheet created in Step 4
@@ -334,7 +338,7 @@ echo "Moving results to the N: drive"
 mkdir -p "$BASE_DIR/move_MPX"
 
 # Move content to staging folder (Warning: this moves the folder itself, ensure logic matches intent)
-mv "$TMP_RES/" "move_MPX/"
+mv "$TMP_RES/" "$BASE_DIR/move_MPX"
 
 smbclient "$SMB_HOST" -A "$SMB_AUTH" -D "$SMB_DIR" <<EOF
 prompt OFF
@@ -342,5 +346,8 @@ recurse ON
 lcd $BASE_DIR/move_MPX
 mput *
 EOF
+
+echo "Cleaning up local files..."
+rm -rf "$TMP_DIR" "$TMP_RES" "$BASE_DIR/move_MPX"
 
 echo "Done."
