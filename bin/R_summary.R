@@ -70,7 +70,7 @@ combined_all <- combined_all %>%
     MappedPercentage = Mapped_Percentage
   ) %>% 
   select(
-    -fastq, -PrøveNr
+    -fastq, -PrøveNr, -Mapped_Reads_Unnormalized, -Mapped_Percentage_Unnormalized
   )
 
 write_csv(combined_all, options[4])
