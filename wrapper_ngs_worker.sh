@@ -358,4 +358,6 @@ EOF
 echo "Cleaning up local files..."
 rm -rf "$TMP_DIR" "$TMP_RES" "$BASE_DIR/move_MPX"
 
+nextflow clean -f
+
 echo "Done."
