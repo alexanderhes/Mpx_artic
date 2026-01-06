@@ -58,7 +58,7 @@ usage() {
     echo "Usage: $SCRIPT_NAME [OPTIONS]"
     echo "Options:"
     echo "  -h, --help        Display this help message"
-    echo "  -r, --run         Specify the run name (e.g., NGS_SEQ-20240214-03)"
+    echo "  -r, --run         Specify the run name (MPX012)"
     echo "  -a, --agens       Specify agens (MPX)"
     echo "  -y, --year        Specify the year directory of the fastq files on the N-drive"
     exit 1
@@ -118,11 +118,6 @@ set_status "Started wrapper. RUN=$RUN AGENS=$AGENS YEAR=$YEAR"
 #    set_status "Removed local hcvtyper directory to avoid conflicts"
 #fi
 
-# Export the access token for web monitoring with tower
-#CHANGE THIS WHEN LOOKED INTO
-#export TOWER_ACCESS_TOKEN=eyJ0aWQiOiA4ODYzfS5mZDM1MjRkYTMwNjkyOWE5ZjdmZjdhOTVkODk3YjI5YTdjYzNlM2Zm
-# Add workspace ID for Virus_NGS
-#export TOWER_WORKSPACE_ID=150755685543204
 
 # Set working directory
 cd $HOME
@@ -332,11 +327,17 @@ set_status "Activated NEXTFLOW conda environment"
 VERSION="main"
 
 # 2. Tell Nextflow to refresh the code from GitHub
-nextflow pull alexanderhes/Mpx_artic_test -r $VERSION
+nextflow pull alexanderhes/Mpx_artic_test -r $VERSION || {
+    set_status "Error: Nextflow pull failed"
+    exit 1
+}
 
 # 3. Run it directly from the GitHub handle
 nextflow run alexanderhes/Mpx_artic_test -r $VERSION \
-    --input_dir "$FINAL_SAMPLESHEET" 
+    --input_dir "$FINAL_SAMPLESHEET" || {
+    set_status "Error: Nextflow pipeline execution failed"
+    exit 1
+}
 
 
 # --- 6. UPLOAD RESULTS ---
