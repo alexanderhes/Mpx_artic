@@ -93,32 +93,6 @@ fi
 printf '[%s] Initialized\n' "$(date +'%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
 set_status "Started wrapper. RUN=$RUN AGENS=$AGENS YEAR=$YEAR"
 
-
-# Make sure the latest version of the ngs_scripts repo is present locally
-#CHANGE THIS WHEN SCRIPT IS AVAILABLE AT FHI GITHUB REPO
-#REPO="$HOME/ngs_scripts"
-#REPO_URL="https://github.com/folkehelseinstituttet/ngs_scripts.git"
-
-#set_status "Ensuring local copy of ngs_scripts (pull/clone)"
-# Check if the directory exists
-#if [ -d "$REPO" ]; then
-#    echo "Directory 'ngs_scripts' exists. Pulling latest changes..."
-#    cd "$REPO"
-#    git pull
-#else
-#    echo "Directory 'ngs_scripts' does not exist. Cloning repository..."
-#    git clone "$REPO_URL" "$REPO"
-#fi
-
-#cd $HOME
-
-# Remove potentially conflicting local pipeline clone
-#if [ -d "$HOME/hcvtyper" ]; then 
-#    rm -rf $HOME/hcvtyper
-#    set_status "Removed local hcvtyper directory to avoid conflicts"
-#fi
-
-
 # Set working directory
 cd $HOME
 
@@ -340,12 +314,12 @@ nextflow run alexanderhes/Mpx_artic_test -r $VERSION \
 }
 
 
-# --- 6. UPLOAD RESULTS ---
+# --- 6. UPLOAD RESULTS AND CLEAN UP ---
 
 echo "Moving results to the N: drive"
 mkdir -p "$BASE_DIR/move_MPX"
 
-# Move content to staging folder (Warning: this moves the folder itself, ensure logic matches intent)
+# Move content to staging folder
 mv "$TMP_RES/" "$BASE_DIR/move_MPX"
 
 smbclient "$SMB_HOST" -A "$SMB_AUTH" -D "$SMB_DIR" <<EOF
