@@ -59,7 +59,9 @@ combined_all$Species <- "M-koppevirus"
 
 combined_all <- combined_all %>% 
   rename(
-    SequenceID = sample_id,
+    LW_id = sample_id,       # <--- CHANGE 1: Rename sample_id to LW_id
+    # SequenceID,            # <--- CHANGE 2: We removed this line. 
+                             #      Original SequenceID stays as is.
     Barcode = barcode, 
     Clade = clade, 
     Lineage = lineage, 
@@ -70,13 +72,15 @@ combined_all <- combined_all %>%
     MappedPercentage = Mapped_Percentage
   ) %>% 
   select(
-    -fastq, -PrøveNr, -Mapped_Reads_Unnormalized, -Mapped_Percentage_Unnormalized
+    # CHANGE 3: I removed '-PrøveNr' because your logs showed it 
+    # doesn't exist in the file, which would cause the next error.
+    -fastq, -Mapped_Reads_Unnormalized, -Mapped_Percentage_Unnormalized
   ) %>%
   # Adding the Sequence quality logic
   mutate(`Sequence quality` = case_when(
-    Coverage > 80  ~ "High Quality",
-    Coverage >= 50 & Coverage <= 80 ~ "Medium Quality",
-    Coverage < 50  ~ "Low Quality",
+    Coverage > 80  ~ "High Quality. Lineage assignment high confidence.",
+    Coverage >= 50 & Coverage <= 80 ~ "Medium Quality. Lineage assignment medium confidence.",
+    Coverage < 50  ~ "Low Quality. Lineage assignment low confidence.",
     TRUE           ~ "Unknown"
   ))
 
