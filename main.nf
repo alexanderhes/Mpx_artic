@@ -12,6 +12,12 @@ include { COMBINE_STATS } from './modules/combine_stats'
 include { R_COMBINE_RESULTS } from './modules/combine_results'
 include { DEPTH_STATS }         from './modules/depth_stats'
 include { COMBINE_DEPTH_STATS } from './modules/combine_depth_stats'
+include { USHER_DOWNLOAD }      from './modules/usher_download'
+include { USHER_ALIGN }         from './modules/usher_align'
+include { USHER_MSA }           from './modules/usher_msa'
+include { USHER_MAKE_VCF }      from './modules/usher_make_vcf'
+include { USHER_MASK_VCF }      from './modules/usher_mask_vcf'
+include { USHER_PLACE }         from './modules/usher_place'
 
 
 // Define parameters
@@ -159,5 +165,44 @@ workflow {
 
     // View the final results
     R_COMBINE_RESULTS.out.final_results.view { "Final results: $it" }
+
+    // -------------------------------------------------------------------------
+    // UShER phylogenetic placement
+    // -------------------------------------------------------------------------
+
+    // Download latest global mpox tree and metadata
+    USHER_DOWNLOAD()
+
+    // Align combined consensus sequences against the reference
+    USHER_ALIGN(
+        COMBINE_FASTA.out.combined_fasta,
+        file(params.usher_ref)
+    )
+
+    // Build padded MSA from SAM
+    USHER_MSA(
+        USHER_ALIGN.out.sam_file,
+        file(params.usher_ref)
+    )
+
+    // Generate VCF from MSA
+    USHER_MAKE_VCF(
+        USHER_MSA.out.msa_fasta
+    )
+
+    // Mask problem sites from VCF
+    USHER_MASK_VCF(
+        USHER_MAKE_VCF.out.raw_vcf,
+        file(params.usher_mask)
+    )
+
+    // Place samples in global tree and generate reports
+    usher_place_input = USHER_MASK_VCF.out.masked_vcf
+        .combine(USHER_DOWNLOAD.out.pb_file)
+        .combine(USHER_DOWNLOAD.out.metadata)
+
+    USHER_PLACE(usher_place_input)
+
+    USHER_PLACE.out.final_report.view { "UShER report: \$it" }
 
 }
