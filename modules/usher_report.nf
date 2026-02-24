@@ -7,7 +7,7 @@ process USHER_REPORT {
     path samplesheet
 
     output:
-    tuple val(run_name), path("${run_name}_closest_neighbor_report.csv"), emit: neighbor_report
+    tuple val(run_name), path("${run_name}_closest_neighbor_report.tsv"), emit: neighbor_report
 
     script:
     """
@@ -16,6 +16,6 @@ process USHER_REPORT {
         "${samplesheet}" \
         "${optimized_nwk}" \
         "${global_metadata}" \
-        "${run_name}_closest_neighbor_report.csv"
+        "${run_name}_closest_neighbor_report.tsv"
     """
 }

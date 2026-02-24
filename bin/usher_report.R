@@ -146,5 +146,5 @@ summary_report <- final_report %>%
   select(-Min_Date, -Max_Date)
 
 message(paste("Writing report to:", output_file))
-write_csv(summary_report, output_file)
+write_tsv(summary_report, output_file)
 message("Done.")
