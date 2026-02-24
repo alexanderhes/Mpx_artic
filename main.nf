@@ -18,6 +18,7 @@ include { USHER_MSA }           from './modules/usher_msa'
 include { USHER_MAKE_VCF }      from './modules/usher_make_vcf'
 include { USHER_MASK_VCF }      from './modules/usher_mask_vcf'
 include { USHER_PLACE }         from './modules/usher_place'
+include { USHER_REPORT }        from './modules/usher_report'
 
 
 // Define parameters
@@ -204,5 +205,14 @@ workflow {
     USHER_PLACE(usher_place_input)
 
     USHER_PLACE.out.final_report.view { "UShER report: \$it" }
+
+    // Closest-neighbor R report
+    usher_report_input = USHER_PLACE.out.optimized_nwk
+        .join(COMBINE_FASTA.out.combined_fasta)
+        .combine(USHER_DOWNLOAD.out.metadata)
+
+    USHER_REPORT(usher_report_input, file(params.input_dir))
+
+    USHER_REPORT.out.neighbor_report.view { "Closest neighbor report: \$it" }
 
 }
