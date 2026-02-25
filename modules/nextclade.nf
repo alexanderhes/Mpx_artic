@@ -13,6 +13,9 @@ process NEXTCLADE {
 
     script:
     """
+    # Update the nextclade dataset (all clades)
+    nextclade dataset get --name MPXV --output-dir ${nextclade_dataset}
+    
     nextclade run ${combined_consensus} \
         -D ${nextclade_dataset} \
         -n ${run_name} \
