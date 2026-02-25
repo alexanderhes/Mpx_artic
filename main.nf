@@ -97,7 +97,7 @@ workflow {
     COMBINE_FASTA(combined_consensus)
 
     // Run Nextclade on combined consenses
-    NEXTCLADE(COMBINE_FASTA.out.combined_fasta, file(params.nextclade_dataset, checkIfExists: true))
+    NEXTCLADE(COMBINE_FASTA.out.combined_fasta)
 
 
     // Collect all read stats
