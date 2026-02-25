@@ -19,6 +19,14 @@ include { USHER_MAKE_VCF }      from './modules/usher_make_vcf'
 include { USHER_MASK_VCF }      from './modules/usher_mask_vcf'
 include { USHER_PLACE }         from './modules/usher_place'
 include { USHER_REPORT }        from './modules/usher_report'
+include { VERSION_ARTIC }       from './modules/versions'
+include { VERSION_NEXTCLADE }   from './modules/versions'
+include { VERSION_USHER }       from './modules/versions'
+include { VERSION_GOFASTA }     from './modules/versions'
+include { VERSION_BEDTOOLS }    from './modules/versions'
+include { VERSION_R }           from './modules/versions'
+include { VERSION_R_APE }       from './modules/versions'
+include { COLLECT_VERSIONS }    from './modules/versions'
 
 
 // Define parameters
@@ -179,6 +187,29 @@ workflow {
         USHER_REPORT.out.neighbor_report.map { it[1] }  // path to closest neighbor TSV
     )
 
-    R_COMBINE_RESULTS.out.final_results.view { "Final results: \$it" }
+    R_COMBINE_RESULTS.out.final_results.view { "Final results: \$it" }    // -------------------------------------------------------------------------
+    // Capture tool versions for retrospective auditability
+    // -------------------------------------------------------------------------
+    run_name_ch = input_samples.map { it[2] }.first()
 
+    VERSION_ARTIC()
+    VERSION_NEXTCLADE()
+    VERSION_USHER()
+    VERSION_GOFASTA()
+    VERSION_BEDTOOLS()
+    VERSION_R()
+    VERSION_R_APE()
+
+    all_versions = VERSION_ARTIC.out
+        .mix(
+            VERSION_NEXTCLADE.out,
+            VERSION_USHER.out,
+            VERSION_GOFASTA.out,
+            VERSION_BEDTOOLS.out,
+            VERSION_R.out,
+            VERSION_R_APE.out
+        )
+        .collect()
+
+    COLLECT_VERSIONS(run_name_ch, all_versions)
 }
