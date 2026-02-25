@@ -14,8 +14,11 @@ process READ_STATS {
     # Count raw reads across all fastq.gz files in the directory
     raw_count=0
     for file in ${raw_fastq}/*.fastq.gz; do
-        file_count=\$(zcat \$file | echo \$((`wc -l`/4)))
-        raw_count=\$((raw_count + file_count))
+        if [ -f "\$file" ]; then
+            file_count=\$(zcat "\$file" | wc -l)
+            file_count=\$((file_count / 4))
+            raw_count=\$((raw_count + file_count))
+        fi
     done
 
     # Count filtered reads

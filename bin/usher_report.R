@@ -9,7 +9,7 @@ library(castor)
 #   2: filled samplesheet (semicolon-separated, contains SampleDate column)
 #   3: optimized NWK tree (pipeline output from USHER_PLACE)
 #   4: global metadata TSV (downloaded by USHER_DOWNLOAD)
-#   5: output CSV path
+#   5: output TSV path
 # ==============================================================================
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 5) {
@@ -129,7 +129,9 @@ final_report <- bind_rows(results_list) %>%
 # 7. Summarise: one row per local sample
 # ==============================================================================
 summary_report <- final_report %>%
-  mutate(date_clean = ymd(date, quiet = TRUE)) %>%
+  # Try full date (YYYY-MM-DD) first, fall back to year-month (YYYY-MM) for partial dates.
+  # Partial dates resolve to the 1st of the month (e.g. "2022-04" -> 2022-04-01).
+  mutate(date_clean = coalesce(ymd(date, quiet = TRUE), ym(date, quiet = TRUE))) %>%
   group_by(My_Sample) %>%
   summarise(
     Count_Neighbors       = n(),
