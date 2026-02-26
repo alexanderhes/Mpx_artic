@@ -6,7 +6,8 @@ process R_COMBINE_RESULTS {
     tuple val(run_name), path(combined_depth_stats)
     path sample_sheet
     path nextclade_csv
-    
+    path neighbor_report
+
     output:
     tuple val(run_name), path("${run_name}_final_results.csv"), emit: final_results
 
@@ -18,6 +19,7 @@ process R_COMBINE_RESULTS {
         ${sample_sheet} \
         ${nextclade_csv} \
         ${run_name}_final_results.csv \
-        ${combined_depth_stats}
+        ${combined_depth_stats} \
+        ${neighbor_report}
     """
 }

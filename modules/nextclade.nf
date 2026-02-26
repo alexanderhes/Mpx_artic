@@ -5,7 +5,6 @@ process NEXTCLADE {
 
     input:
     tuple val(run_name), path(combined_consensus)
-    path(nextclade_dataset)
 
     output:
     tuple val(run_name), path("nextclade_output"), emit: nextclade_results
@@ -13,8 +12,11 @@ process NEXTCLADE {
 
     script:
     """
+    # Download the latest nextclade dataset (all clades) fresh each run
+    nextclade dataset get --name MPXV --output-dir nextclade_dataset
+    
     nextclade run ${combined_consensus} \
-        -D ${nextclade_dataset} \
+        -D nextclade_dataset \
         -n ${run_name} \
         -O nextclade_output/
 

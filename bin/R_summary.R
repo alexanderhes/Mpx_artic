@@ -1,10 +1,11 @@
 library(tidyverse)
 options <- commandArgs(trailingOnly = TRUE)
 
-read_stats <- read_tsv(options[1])
+read_stats   <- read_tsv(options[1])
 sample_sheet <- read_csv2(options[2])
-nextclade <- read_csv2(options[3])
+nextclade    <- read_csv2(options[3])
 depth_stats  <- read_tsv(options[5])
+neighbor_report <- read_tsv(options[6])
 
 sample_sheet <- sample_sheet %>%
   mutate(
@@ -55,13 +56,21 @@ combined_all <- sample_sheet %>%
   left_join(read_stats, by = c("sample_id", "barcode")) %>%
   left_join(depth_stats, by = c("sample_id", "barcode"))
 
+# Join UShER closest-neighbor columns using reconstructed tip label
+neighbor_report <- neighbor_report %>%
+  rename(tip_label = My_Sample) %>%
+  select(tip_label, Distance, Count_Neighbors, Countries, Date_Range)
+
+combined_all <- combined_all %>%
+  mutate(tip_label = paste0(barcode, "_", sample_id)) %>%
+  left_join(neighbor_report, by = "tip_label") %>%
+  select(-tip_label)
+
 combined_all$Species <- "M-koppevirus"
 
 combined_all <- combined_all %>% 
   rename(
-    LW_id = sample_id,       # <--- CHANGE 1: Rename sample_id to LW_id
-    # SequenceID,            # <--- CHANGE 2: We removed this line. 
-                             #      Original SequenceID stays as is.
+    LW_id = sample_id,
     Barcode = barcode, 
     Clade = clade, 
     Lineage = lineage, 
@@ -69,18 +78,25 @@ combined_all <- combined_all %>%
     RawReads = Raw_Reads,
     TrimmedReads = Filtered_Reads, 
     MappedReads = Mapped_Reads, 
-    MappedPercentage = Mapped_Percentage
+    MappedPercentage = Mapped_Percentage,
+    Phylo_Distance = Distance,
+    N_Tied_Neighbors = Count_Neighbors,
+    Neighbor_Countries = Countries,
+    Neighbor_Date_Range = Date_Range
   ) %>% 
   select(
-    # CHANGE 3: I removed '-PrøveNr' because your logs showed it 
-    # doesn't exist in the file, which would cause the next error.
     -fastq, -Mapped_Reads_Unnormalized, -Mapped_Percentage_Unnormalized
   ) %>%
-  # Adding the Sequence quality logic
+  # Replace semicolon separators in Neighbor_Countries with pipe separators for proper CSV formatting
+  mutate(Neighbor_Countries = gsub("; ", " | ", Neighbor_Countries, fixed = TRUE)) %>%
+  # Sequence quality: coverage-based confidence + lineage assignment status
   mutate(`Sequence quality` = case_when(
-    Coverage > 80  ~ "High Quality. Lineage assignment high confidence.",
-    Coverage >= 50 & Coverage <= 80 ~ "Medium Quality. Lineage assignment medium confidence.",
-    Coverage < 50  ~ "Low Quality. Lineage assignment low confidence.",
+    Coverage > 80  & !is.na(Lineage) & Lineage != "unassigned" ~ "High Quality. Lineage and phylogenetic placement high confidence.",
+    Coverage > 80  & (is.na(Lineage) | Lineage == "unassigned") ~ "High Quality genome. Lineage unassigned. Phylogenetic placement high confidence.",
+    Coverage >= 50 & Coverage <= 80 & !is.na(Lineage) & Lineage != "unassigned" ~ "Medium Quality. Lineage and phylogenetic placement medium confidence.",
+    Coverage >= 50 & Coverage <= 80 & (is.na(Lineage) | Lineage == "unassigned") ~ "Medium Quality genome. Lineage unassigned. Phylogenetic placement medium confidence.",
+    Coverage < 50  & !is.na(Lineage) & Lineage != "unassigned" ~ "Low Quality. Lineage and phylogenetic placement low confidence.",
+    Coverage < 50  & (is.na(Lineage) | Lineage == "unassigned") ~ "Low Quality genome. Lineage unassigned. Phylogenetic placement low confidence.",
     TRUE           ~ "Unknown"
   ))
 

@@ -1,0 +1,12 @@
+Chrom	ChromStart	ChromEnd	locus tag	Comment
+NC_063383.1	0	1500		mask from beginning (Nextstrain mask file)
+NC_063383.1	133050	133250		indel variation and long homopolymers(Nextstrain mask file)
+NC_063383.1	136500	136600		indel variation and long homopolymers(Nextstrain mask file)
+NC_063383.1	140050	140250		indel variation and long repetitive elements(Nextstrain mask file)
+NC_063383.1	146750	147000		indel variation and long repetitive elements(Nextstrain mask file)
+NC_063383.1	150500	150650		indel variation and long repetitive elements(Nextstrain mask file)
+NC_063383.1	169250	169500		indel variation and long repetitive elements(Nextstrain mask file)
+NC_063383.1	169700	169800		indel variation and long repetitive elements(Nextstrain mask file)
+NC_063383.1	173150	173350		indel variation and long repetitive elements(Nextstrain mask file)
+NC_063383.1	179000	179300		indel variation and long repetitive elements(Nextstrain mask file)
+NC_063383.1	190787	197209		mask from end (6422)(Nextstrain mask file)
