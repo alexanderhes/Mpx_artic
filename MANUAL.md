@@ -19,11 +19,11 @@ Raw ONT reads from each barcode directory are length-filtered using `artic guppy
 ### Step 2 — Consensus genome assembly (`ARTIC_MINION`)
 Filtered reads are assembled into consensus genomes using `artic minion`. The tool performs:
 - Read mapping to the reference genome (`NC_063383_masked.fasta`)
-- Amplicon normalisation and primer trimming using the Welkers .BED scheme
+- Amplicon normalisation and primer trimming
 - Variant calling using the specified basecalling model
 - Consensus FASTA generation with low-coverage positions masked as N
 
-**Input:** Filtered FASTQ, primer BED file, reference FASTA, Medaka model  
+**Input:** Filtered FASTQ, primer BED file, reference FASTA, basecalling model  
 **Output:** Per-sample consensus FASTA, primer-trimmed BAM, raw (un-normalised) BAM, and all intermediate artic minion files
 
 ---
