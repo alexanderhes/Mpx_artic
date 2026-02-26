@@ -87,6 +87,8 @@ combined_all <- combined_all %>%
   select(
     -fastq, -Mapped_Reads_Unnormalized, -Mapped_Percentage_Unnormalized
   ) %>%
+  # Replace semicolon separators in Neighbor_Countries with pipe separators for proper CSV formatting
+  mutate(Neighbor_Countries = gsub("; ", " | ", Neighbor_Countries, fixed = TRUE)) %>%
   # Sequence quality: coverage-based confidence + lineage assignment status
   mutate(`Sequence quality` = case_when(
     Coverage > 80  & !is.na(Lineage) & Lineage != "unassigned" ~ "High Quality. Lineage and phylogenetic placement high confidence.",
