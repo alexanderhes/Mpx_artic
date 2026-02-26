@@ -8,8 +8,8 @@ process USHER_PLACE {
     tuple val(run_name), path(masked_vcf), path(pb_file), path(metadata)
 
     output:
-    tuple val(run_name), path("${run_name}_full_tree_greedy.nwk"),      emit: greedy_nwk
-    tuple val(run_name), path("${run_name}_full_tree_greedy.json"),     emit: greedy_json
+    tuple val(run_name), path("${run_name}_full_tree_global.nwk"),      emit: global_nwk
+    tuple val(run_name), path("${run_name}_full_tree_global.json"),     emit: global_json
     tuple val(run_name), path("${run_name}_full_tree_optimized.nwk"),   emit: optimized_nwk
     tuple val(run_name), path("${run_name}_full_tree_optimized.json"),  emit: optimized_json
     tuple val(run_name), path("${run_name}_context_tree.nwk"),          emit: context_nwk
@@ -25,7 +25,7 @@ process USHER_PLACE {
     grep -m1 "^#CHROM" "${masked_vcf}" | cut -f10- | tr '\\t' '\\n' > sample_list.txt
 
     # -------------------------------------------------------------------------
-    # Step 5: UShER greedy placement
+    # Step 5: UShER global placement
     # -------------------------------------------------------------------------
     usher \\
         -i "${pb_file}" \\
@@ -34,16 +34,16 @@ process USHER_PLACE {
         -o usher_results/placed.pb \\
         -d usher_results/
 
-    # Export greedy tree - Newick
+    # Export global tree - Newick
     matUtils extract \\
         -i usher_results/placed.pb \\
-        -t ${run_name}_full_tree_greedy.nwk
+        -t ${run_name}_full_tree_global.nwk
 
-    # Export greedy tree - JSON with metadata
+    # Export global tree - JSON with metadata
     matUtils extract \\
         -i usher_results/placed.pb \\
         -M "${metadata}" \\
-        -j ${run_name}_full_tree_greedy.json
+        -j ${run_name}_full_tree_global.json
 
     # -------------------------------------------------------------------------
     # Step 5.5: Tree optimisation
