@@ -1,30 +1,19 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Capture tool versions at runtime for retrospective auditability.
-// One lightweight process per container; each emits a small text snippet.
-// COLLECT_VERSIONS merges them into {run_name}_versions.txt in the output dir.
+// One lightweight process per container; each emits CSV rows (tool,version,container).
+// COLLECT_VERSIONS merges them into {run_name}_versions.csv in the output dir.
 // ─────────────────────────────────────────────────────────────────────────────
 
 process VERSION_ARTIC {
     container 'quay.io/biocontainers/artic:1.8.5--pyhdfd78af_0'
 
     output:
-    path "versions_artic.txt"
+    path "versions_artic.csv"
 
     script:
     """
-    {
-        echo "=== ARTIC fieldbioinformatics ==="
-        artic --version 2>&1 || true
-        echo ""
-        echo "=== minimap2 ==="
-        minimap2 --version 2>&1 || true
-        echo ""
-        echo "=== samtools ==="
-        samtools --version 2>&1 | head -1 || true
-        echo ""
-        echo "=== medaka ==="
-        medaka --version 2>&1 || true
-    } > versions_artic.txt
+    VER=\$(artic --version 2>&1 | grep -oP '\\d+\\.\\d+\\.\\d+' | head -1 || echo "unknown")
+    echo "artic,\${VER},quay.io/biocontainers/artic:1.8.5--pyhdfd78af_0" > versions_artic.csv
     """
 }
 
@@ -32,14 +21,12 @@ process VERSION_NEXTCLADE {
     container 'nextstrain/nextclade:3.9.1'
 
     output:
-    path "versions_nextclade.txt"
+    path "versions_nextclade.csv"
 
     script:
     """
-    {
-        echo "=== Nextclade ==="
-        nextclade --version 2>&1 || true
-    } > versions_nextclade.txt
+    VER=\$(nextclade --version 2>&1 | grep -oP '\\d+\\.\\d+\\.\\d+' | head -1 || echo "unknown")
+    echo "nextclade,\${VER},nextstrain/nextclade:3.9.1" > versions_nextclade.csv
     """
 }
 
@@ -47,23 +34,12 @@ process VERSION_USHER {
     container 'quay.io/biocontainers/usher:0.6.6--hdd55de9_4'
 
     output:
-    path "versions_usher.txt"
+    path "versions_usher.csv"
 
     script:
     """
-    {
-        echo "=== UShER ==="
-        usher --version 2>&1 || true
-        echo ""
-        echo "=== matOptimize ==="
-        matOptimize --version 2>&1 || true
-        echo ""
-        echo "=== matUtils ==="
-        matUtils --version 2>&1 || true
-        echo ""
-        echo "=== faToVcf ==="
-        faToVcf 2>&1 | head -2 || true
-    } > versions_usher.txt
+    VER=\$(usher --version 2>&1 | grep -oP '\\d+\\.\\d+\\.\\d+' | head -1 || echo "unknown")
+    echo "usher,\${VER},quay.io/biocontainers/usher:0.6.6--hdd55de9_4" > versions_usher.csv
     """
 }
 
@@ -71,14 +47,12 @@ process VERSION_GOFASTA {
     container 'quay.io/biocontainers/gofasta:1.2.3--h9ee0642_0'
 
     output:
-    path "versions_gofasta.txt"
+    path "versions_gofasta.csv"
 
     script:
     """
-    {
-        echo "=== gofasta ==="
-        gofasta --version 2>&1 || true
-    } > versions_gofasta.txt
+    VER=\$(gofasta --version 2>&1 | grep -oP '\\d+\\.\\d+\\.\\d+' | head -1 || echo "unknown")
+    echo "gofasta,\${VER},quay.io/biocontainers/gofasta:1.2.3--h9ee0642_0" > versions_gofasta.csv
     """
 }
 
@@ -86,14 +60,12 @@ process VERSION_BEDTOOLS {
     container 'quay.io/biocontainers/bedtools:2.31.1--h13024bc_3'
 
     output:
-    path "versions_bedtools.txt"
+    path "versions_bedtools.csv"
 
     script:
     """
-    {
-        echo "=== bedtools ==="
-        bedtools --version 2>&1 || true
-    } > versions_bedtools.txt
+    VER=\$(bedtools --version 2>&1 | grep -oP '\\d+\\.\\d+\\.\\d+' | head -1 || echo "unknown")
+    echo "bedtools,\${VER},quay.io/biocontainers/bedtools:2.31.1--h13024bc_3" > versions_bedtools.csv
     """
 }
 
@@ -101,17 +73,19 @@ process VERSION_R {
     container 'rocker/tidyverse:4.4'
 
     output:
-    path "versions_r.txt"
+    path "versions_r.csv"
 
     script:
     """
-    {
-        echo "=== R ==="
-        R --version 2>&1 | head -1 || true
-        echo ""
-        echo "=== R packages ==="
-        Rscript -e 'pkgs <- c("tidyverse","dplyr","readr","stringr","lubridate"); for(p in pkgs) cat(p, as.character(packageVersion(p)), "\\n")' 2>&1 || true
-    } > versions_r.txt
+    R_VER=\$(R --version 2>&1 | head -1 | grep -oP '\\d+\\.\\d+\\.\\d+' | head -1 || echo "unknown")
+    echo "R,\${R_VER},rocker/tidyverse:4.4" > versions_r.csv
+    Rscript -e '
+        pkgs <- c("tidyverse","dplyr","readr","stringr","lubridate")
+        for (p in pkgs) {
+            cat(p, as.character(packageVersion(p)), "rocker/tidyverse:4.4", sep=",")
+            cat("\\n")
+        }
+    ' 2>&1 >> versions_r.csv || true
     """
 }
 
@@ -119,17 +93,19 @@ process VERSION_R_APE {
     container 'community.wave.seqera.io/library/r-ape_r-base_r-castor_r-lubridate_r-tidyverse:b29271c460ff37dc'
 
     output:
-    path "versions_r_ape.txt"
+    path "versions_r_ape.csv"
 
     script:
     """
-    {
-        echo "=== R (UShER report container) ==="
-        R --version 2>&1 | head -1 || true
-        echo ""
-        echo "=== R packages ==="
-        Rscript -e 'pkgs <- c("ape","castor","lubridate","tidyverse"); for(p in pkgs) cat(p, as.character(packageVersion(p)), "\\n")' 2>&1 || true
-    } > versions_r_ape.txt
+    R_VER=\$(R --version 2>&1 | head -1 | grep -oP '\\d+\\.\\d+\\.\\d+' | head -1 || echo "unknown")
+    echo "R,\${R_VER},community.wave.seqera.io/library/r-ape_r-base_r-castor_r-lubridate_r-tidyverse:b29271c460ff37dc" > versions_r_ape.csv
+    Rscript -e '
+        pkgs <- c("ape","castor","lubridate","tidyverse")
+        for (p in pkgs) {
+            cat(p, as.character(packageVersion(p)), "community.wave.seqera.io/library/r-ape_r-base_r-castor_r-lubridate_r-tidyverse:b29271c460ff37dc", sep=",")
+            cat("\\n")
+        }
+    ' 2>&1 >> versions_r_ape.csv || true
     """
 }
 
@@ -141,20 +117,13 @@ process COLLECT_VERSIONS {
     path version_files
 
     output:
-    path "${run_name}_versions.txt"
+    path "${run_name}_versions.csv"
 
     script:
     """
     {
-        echo "MPXV ARTIC Pipeline — Tool Versions"
-        echo "Run: ${run_name}"
-        echo "Date: \$(date +'%Y-%m-%d %H:%M:%S')"
-        echo "======================================="
-        echo ""
-        for f in ${version_files}; do
-            cat "\$f"
-            echo ""
-        done
-    } > ${run_name}_versions.txt
+        echo "tool,version,container,run_name,date"
+        awk -v run="${run_name}" -v date="\$(date +'%Y-%m-%d')" '{print \$0","run","date}' ${version_files}
+    } > ${run_name}_versions.csv
     """
 }
