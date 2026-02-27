@@ -9,7 +9,7 @@ This pipeline performs whole-genome analysis of Monkeypox virus (MPXV) sequencin
 ## Pipeline steps
 
 ### Step 1 — Read filtering (`GUPPYPLEX`)
-Raw ONT reads from each barcode directory are length-filtered using `artic guppyplex`. Reads shorter than `params.min_length` (default: 100 bp) are discarded. This removes adapter artefacts and chimeric reads that would interfere with consensus generation.
+Raw ONT reads from each barcode directory are length-filtered using `artic guppyplex`. Reads shorter than `params.min_length` (default: 100 bp) are discarded. 
 
 **Input:** Per-sample raw FASTQ directories (from samplesheet)  
 **Output:** One filtered FASTQ file per sample (`{barcode}_{sample_id}_filtered.fastq`)
@@ -19,11 +19,11 @@ Raw ONT reads from each barcode directory are length-filtered using `artic guppy
 ### Step 2 — Consensus genome assembly (`ARTIC_MINION`)
 Filtered reads are assembled into consensus genomes using `artic minion`. The tool performs:
 - Read mapping to the reference genome (`NC_063383_masked.fasta`)
-- Amplicon normalisation and primer trimming using the Welkers .BED scheme
+- Amplicon normalisation and primer trimming
 - Variant calling using the specified basecalling model
 - Consensus FASTA generation with low-coverage positions masked as N
 
-**Input:** Filtered FASTQ, primer BED file, reference FASTA, Medaka model  
+**Input:** Filtered FASTQ, primer BED file, reference FASTA, basecalling model  
 **Output:** Per-sample consensus FASTA, primer-trimmed BAM, raw (un-normalised) BAM, and all intermediate artic minion files
 
 ---
