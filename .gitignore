@@ -9,3 +9,15 @@ results/
 *.bam
 *.vcf
 *.tar.gz
+
+# IDE / session artifacts
+.Rhistory
+bin/.Rhistory
+
+# UShER runtime-downloaded or unreferenced files
+assets/UShER/mpxv.latest.masked.pb
+assets/UShER/mpxv.latest.nwk
+assets/UShER/mpxv.latest.metadata.tsv
+assets/UShER/mpxv.cladeII.*.masked.taxonium.jsonl
+assets/UShER/mpxv.cladeII.*.metadata.tsv
+assets/UShER/Usher-version.txt

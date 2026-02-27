@@ -1,3 +1,0 @@
-USHER version
-8,913 genomes from INSDC (GenBank/ENA/DDBJ) (2026-01-09)
-
