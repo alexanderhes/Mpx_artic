@@ -1,0 +1,2 @@
+# Exclude vendored/generated files and assets from language detection
+assets/ linguist-vendored
