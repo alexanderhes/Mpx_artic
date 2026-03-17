@@ -1,5 +1,6 @@
 process ARTIC_MINION {
     tag "${sample_id}"
+    errorStrategy { task.exitStatus == 20 ? 'ignore' : 'terminate' }
     publishDir "${params.output_dir}/${run_name}/minion/${barcode}_${sample_id}", mode: 'copy'
 
     input:
