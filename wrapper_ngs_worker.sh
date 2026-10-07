@@ -64,6 +64,8 @@ usage() {
     echo "  -m, --mode        artic (default): raw fastq -> consensus -> typing + phylogeny"
     echo "                    consensus: finished genomes (one FASTA per sample, file name = PrøveID)"
     echo "                               -> typing + phylogeny"
+    echo "  -f, --fasta-dir   N-drive folder with the consensus FASTA files (required with -m consensus),"
+    echo "                    relative to the styrt share, e.g. /Virologi/NGS/<folder>/<run>"
     exit 1
 }
 
@@ -72,14 +74,16 @@ RUN=""
 AGENS=""
 YEAR=""
 MODE="artic"
+FASTA_DIR=""
 
-while getopts "hr:a:y:m:" opt; do
+while getopts "hr:a:y:m:f:" opt; do
     case "$opt" in
         h) usage ;;
         r) RUN="$OPTARG" ;;
         a) AGENS="$OPTARG" ;;
         y) YEAR="$OPTARG" ;;
         m) MODE="$OPTARG" ;;
+        f) FASTA_DIR="$OPTARG" ;;
         ?) usage ;;
     esac
 done
@@ -94,6 +98,16 @@ if [[ "$MODE" != "artic" && "$MODE" != "consensus" ]]; then
     usage
 fi
 
+if [[ "$MODE" = "consensus" && -z "$FASTA_DIR" ]]; then
+    echo "Error: -m consensus requires -f with the N-drive folder holding the FASTA files."
+    usage
+fi
+
+if [[ "$MODE" = "artic" && -n "$FASTA_DIR" ]]; then
+    echo "Error: -f is only used with -m consensus."
+    usage
+fi
+
 # Now that arguments are parsed, set a run-specific status file and initialize it.
 if [ -n "${RUN:-}" ]; then
     STATUS_FILE="$HOME/mpx_${RUN}_status.txt"
@@ -101,7 +115,7 @@ else
     STATUS_FILE="$HOME/mpx_unknown_status.txt"
 fi
 printf '[%s] Initialized\n' "$(date +'%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
-set_status "Started wrapper. RUN=$RUN AGENS=$AGENS YEAR=$YEAR MODE=$MODE"
+set_status "Started wrapper. RUN=$RUN AGENS=$AGENS YEAR=$YEAR MODE=$MODE${FASTA_DIR:+ FASTA_DIR=$FASTA_DIR}"
 
 # Set working directory
 cd $HOME
@@ -126,13 +140,10 @@ SMB_HOST=//pos1-fhi-svm01.fhi.no/styrt
 SMB_DIR=Virologi/NGS/1-NGS-Analyser/1-Rutine/2-Resultater/${AGENS}/${YEAR}
 SMB_SAMPLESHEET_REMOTE=/Virologi/NGS/1-NGS-Analyser/1-Rutine/2-Resultater/${AGENS}/${YEAR}/Samplesheets
 
-# Consensus mode: N-drive folder holding the finished genome FASTA files
-# TODO: set the N-drive path for consensus FASTA input
-SMB_FASTA_INPUT=""
-
-# Determine Input Directory based on Year/Test status
+# Determine Input Directory based on mode and Year/Test status
 if [ "$MODE" = "consensus" ]; then
-    SMB_INPUT="$SMB_FASTA_INPUT"
+    # Consensus mode: N-drive folder with the finished genome FASTA files (-f)
+    SMB_INPUT="$FASTA_DIR"
 elif [ "$RUN" = "TEST" ] || [ "$RUN" = "FULL_TEST" ]; then
     SMB_INPUT="NGS/3-Sekvenseringsbiblioteker/TEST/MPX/$RUN/$RUN/"
 elif [ "$YEAR" -ge 2026 ]; then
@@ -153,12 +164,6 @@ mkdir -p "$TMP_DIR"
 mkdir -p "$TMP_SAMPLESHEET_DIR"
 
 # --- 3. VERIFY REMOTE PATH & DOWNLOAD DATA ---
-
-if [ -z "$SMB_INPUT" ]; then
-    set_status "Error: No N-drive input path configured for MODE=$MODE"
-    echo "Error: SMB_FASTA_INPUT is not set in $SCRIPT_NAME."
-    exit 1
-fi
 
 echo "Verifying that remote path exists: $SMB_INPUT"
 

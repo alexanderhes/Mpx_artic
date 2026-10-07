@@ -40,6 +40,9 @@ screen -S mpxv_artic-TEST -d -m bash /home/ngs/ngs_scripts/mpxv_artic/wrapper.sh
 * `-m, --mode`
   `artic` (default) runs the full pipeline from raw FASTQ. `consensus` runs typing and phylogenetic placement on finished genomes (see below).
 
+* `-f, --fasta-dir`
+  N-drive folder with the consensus FASTA files. Required with `-m consensus`.
+
 ### Consensus mode (finished genomes)
 Runs Nextclade typing and UShER placement in the global tree on genomes that are already assembled (e.g. SPAdes assemblies or genomes from other pipelines), skipping ARTIC.
 
@@ -54,8 +57,10 @@ screen -S mpxv_consensus-RUN -d -m bash /home/ngs/ngs_scripts/mpxv_artic/wrapper
 -r RUN \
 -a MPX \
 -y 2026 \
--m consensus
+-m consensus \
+-f /Virologi/NGS/<folder>/<RUN>
 ```
+`-f` is the N-drive folder (on the same share as the other wrapper paths) that holds the FASTA files; the files are copied locally before the run.
 Directly with Nextflow:
 ```
 nextflow run alexanderhes/Mpx_artic -r main \
