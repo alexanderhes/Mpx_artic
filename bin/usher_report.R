@@ -24,8 +24,8 @@ output_file      <- args[5]
 
 # ==============================================================================
 # 1. Extract tip labels from FASTA headers
-#    Header format: >barcode65_1037456 NC_063383_artic-network/fieldbioinformatics_1.8.5
-#    Tip label:      barcode65_1037456  (first word only, no ">")
+#    Header format: >barcode01_SAMPLE001 NC_063383_artic-network/fieldbioinformatics_1.8.5
+#    Tip label:      barcode01_SAMPLE001  (first word only, no ">")
 # ==============================================================================
 fasta_lines  <- readLines(fasta_file)
 header_lines <- fasta_lines[startsWith(fasta_lines, ">")]
