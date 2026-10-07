@@ -61,6 +61,9 @@ usage() {
     echo "  -r, --run         Specify the run name (MPX012)"
     echo "  -a, --agens       Specify agens (MPX)"
     echo "  -y, --year        Specify the year directory of the fastq files on the N-drive"
+    echo "  -m, --mode        artic (default): raw fastq -> consensus -> typing + phylogeny"
+    echo "                    consensus: finished genomes (one FASTA per sample, file name = PrøveID)"
+    echo "                               -> typing + phylogeny"
     exit 1
 }
 
@@ -68,19 +71,26 @@ usage() {
 RUN=""
 AGENS=""
 YEAR=""
+MODE="artic"
 
-while getopts "hr:a:y:" opt; do
+while getopts "hr:a:y:m:" opt; do
     case "$opt" in
         h) usage ;;
         r) RUN="$OPTARG" ;;
         a) AGENS="$OPTARG" ;;
         y) YEAR="$OPTARG" ;;
+        m) MODE="$OPTARG" ;;
         ?) usage ;;
     esac
 done
 
 if [[ -z "$RUN" || -z "$AGENS" || -z "$YEAR" ]]; then
     echo "Error: Missing required arguments."
+    usage
+fi
+
+if [[ "$MODE" != "artic" && "$MODE" != "consensus" ]]; then
+    echo "Error: --mode must be 'artic' or 'consensus', got '$MODE'."
     usage
 fi
 
@@ -91,7 +101,7 @@ else
     STATUS_FILE="$HOME/mpx_unknown_status.txt"
 fi
 printf '[%s] Initialized\n' "$(date +'%Y-%m-%d %H:%M:%S')" > "$STATUS_FILE"
-set_status "Started wrapper. RUN=$RUN AGENS=$AGENS YEAR=$YEAR"
+set_status "Started wrapper. RUN=$RUN AGENS=$AGENS YEAR=$YEAR MODE=$MODE"
 
 # Set working directory
 cd $HOME
@@ -100,8 +110,12 @@ cd $HOME
 
 # Set up paths
 BASE_DIR=/mnt/tempdata/
-# TMP_DIR will hold the raw fastq files and results
-TMP_DIR=/mnt/tempdata/fastq_mpx/raw/${RUN}
+# TMP_DIR will hold the raw fastq files (artic mode) or consensus FASTA files (consensus mode)
+if [ "$MODE" = "consensus" ]; then
+    TMP_DIR=/mnt/tempdata/fasta_mpx/raw/${RUN}
+else
+    TMP_DIR=/mnt/tempdata/fastq_mpx/raw/${RUN}
+fi
 TMP_RES=/mnt/tempdata/fastq_mpx/analysis/${RUN}
 #MAKE SURE CSV FILE PATH IS PARSED CORRECTLY
 TMP_SAMPLESHEET_DIR=/mnt/tempdata/fastq_mpx/data/samplesheets/
@@ -112,8 +126,14 @@ SMB_HOST=//pos1-fhi-svm01.fhi.no/styrt
 SMB_DIR=Virologi/NGS/1-NGS-Analyser/1-Rutine/2-Resultater/${AGENS}/${YEAR}
 SMB_SAMPLESHEET_REMOTE=/Virologi/NGS/1-NGS-Analyser/1-Rutine/2-Resultater/${AGENS}/${YEAR}/Samplesheets
 
+# Consensus mode: N-drive folder holding the finished genome FASTA files
+# TODO: set the N-drive path for consensus FASTA input
+SMB_FASTA_INPUT=""
+
 # Determine Input Directory based on Year/Test status
-if [ "$RUN" = "TEST" ] || [ "$RUN" = "FULL_TEST" ]; then
+if [ "$MODE" = "consensus" ]; then
+    SMB_INPUT="$SMB_FASTA_INPUT"
+elif [ "$RUN" = "TEST" ] || [ "$RUN" = "FULL_TEST" ]; then
     SMB_INPUT="NGS/3-Sekvenseringsbiblioteker/TEST/MPX/$RUN/$RUN/"
 elif [ "$YEAR" -ge 2026 ]; then
     # -----------------------------------------------------------------------
@@ -134,6 +154,12 @@ mkdir -p "$TMP_SAMPLESHEET_DIR"
 
 # --- 3. VERIFY REMOTE PATH & DOWNLOAD DATA ---
 
+if [ -z "$SMB_INPUT" ]; then
+    set_status "Error: No N-drive input path configured for MODE=$MODE"
+    echo "Error: SMB_FASTA_INPUT is not set in $SCRIPT_NAME."
+    exit 1
+fi
+
 echo "Verifying that remote path exists: $SMB_INPUT"
 
 # Check if the path exists by trying to list it (-c "ls"). 
@@ -144,6 +170,16 @@ if ! smbclient "$SMB_HOST" -A "$SMB_AUTH" -D "$SMB_INPUT" -c "ls" >/dev/null 2>&
     echo "Path attempted: $SMB_INPUT"
     exit 1
 fi
+
+if [ "$MODE" = "consensus" ]; then
+    echo "Copying consensus FASTA files from the N drive..."
+    smbclient "$SMB_HOST" -A "$SMB_AUTH" -D "$SMB_INPUT" <<EOF
+prompt OFF
+recurse ON
+lcd $TMP_DIR
+mget *
+EOF
+else
 
 # Debug: show the SMB_INPUT
 echo "Listing directories in: $SMB_INPUT"
@@ -171,6 +207,8 @@ lcd $TMP_DIR
 mget *
 EOF
 
+fi
+
 echo "Copying samplesheet from the N drive..."
 smbclient "$SMB_HOST" -A "$SMB_AUTH" -D "$SMB_SAMPLESHEET_REMOTE" <<EOF
 prompt OFF
@@ -186,7 +224,7 @@ FINAL_SAMPLESHEET="${TMP_SAMPLESHEET_DIR}/${RUN}_samplesheet_filled.csv"
 
 echo "Processing samplesheet..."
 echo "Input: $RAW_SAMPLESHEET"
-echo "Base Path for FastQ: $TMP_DIR"
+echo "Base Path for FastQ/FASTA: $TMP_DIR"
 
 if [ ! -f "$RAW_SAMPLESHEET" ]; then
     echo "Error: Downloaded samplesheet not found at $RAW_SAMPLESHEET"
@@ -197,7 +235,7 @@ fi
 sed -i '1s/^\xEF\xBB\xBF//' "$RAW_SAMPLESHEET"
 
 
-awk -F';' -v OFS=';' -v base="$TMP_DIR" '
+awk -F';' -v OFS=';' -v base="$TMP_DIR" -v mode="$MODE" '
 # Helper function to remove spaces AND Windows carriage returns (\r)
 function trim(s) {
     gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
@@ -214,9 +252,17 @@ NR == 1 {
         if (name == "PrøveID")  prove_col   = i
         if (name == "RunName")  runname_col = i
         if (name ~ /^[Bb]arcode$/) barcode_col = i
+        if (name == "SampleDate") date_col = i
     }
     #Stop script if columns are not present
-    if (!prove_col || !runname_col || !barcode_col) {
+    if (mode == "consensus" && (!prove_col || !runname_col || !date_col)) {
+        print "ERROR: header must contain PrøveID, RunName, and SampleDate" > "/dev/stderr"
+        print "DEBUG: Headers found: " > "/dev/stderr"
+        for (i = 1; i <= NF; i++) printf "[%s] ", trim($i) > "/dev/stderr"
+        print "" > "/dev/stderr"
+        exit 1
+    }
+    if (mode == "artic" && (!prove_col || !runname_col || !barcode_col)) {
         print "ERROR: header must contain PrøveID, RunName, and Barcode/barcode" > "/dev/stderr"
         print "DEBUG: Headers found: " > "/dev/stderr"
         for (i = 1; i <= NF; i++) printf "[%s] ", trim($i) > "/dev/stderr"
@@ -229,7 +275,7 @@ NR == 1 {
     for (i = 1; i <= NF; i++) {
         if (i == prove_col) {
             out[++out_idx] = "sample_id"
-            out[++out_idx] = "fastq"
+            if (mode == "artic") out[++out_idx] = "fastq"
         } else if (i == barcode_col) {
             out[++out_idx] = "barcode"
         } else {
@@ -266,7 +312,7 @@ $0 ~ /^[[:space:]]*$/ { next }
     # 2. Force it to lowercase (Barcode01 -> barcode01)
     bc = tolower(raw_bc)
     #See if important data is missing
-    if (sid == "" || rn == "" || bc == "") {
+    if (sid == "" || rn == "" || (mode == "artic" && bc == "")) {
         print "ERROR: required field empty at line " NR > "/dev/stderr"
         exit 1
     }
@@ -279,7 +325,7 @@ $0 ~ /^[[:space:]]*$/ { next }
     for (i = 1; i <= NF; i++) {
         if (i == prove_col) {
             out[++out_idx] = sid
-            out[++out_idx] = fq
+            if (mode == "artic") out[++out_idx] = fq
         } else if (i == barcode_col) {
             # 4. Use the lowercase barcode for the column value too
             out[++out_idx] = bc
@@ -326,8 +372,14 @@ nextflow pull alexanderhes/Mpx_artic -r $VERSION || {
 }
 
 # 3. Run it directly from the GitHub handle
+# Consensus mode: pass the FASTA files (glob is expanded by Nextflow, not the shell)
+NF_ARGS=(--input_dir "$FINAL_SAMPLESHEET")
+if [ "$MODE" = "consensus" ]; then
+    NF_ARGS+=(--fasta "${TMP_DIR}/*.{fa,fasta,fna,fa.gz,fasta.gz,fna.gz}")
+fi
+
 nextflow run alexanderhes/Mpx_artic -r $VERSION \
-    --input_dir "$FINAL_SAMPLESHEET" || {
+    "${NF_ARGS[@]}" || {
     set_status "Error: Nextflow pipeline execution failed"
     exit 1
 }
