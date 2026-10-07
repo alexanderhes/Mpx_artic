@@ -4,6 +4,7 @@ nextflow.enable.dsl = 2
 
 // Import workflows
 include { ARTIC }               from './workflows/artic'
+include { CONSENSUS }           from './workflows/consensus'
 include { VERSION_ARTIC }       from './modules/versions'
 include { VERSION_NEXTCLADE }   from './modules/versions'
 include { VERSION_USHER }       from './modules/versions'
@@ -16,11 +17,18 @@ include { COLLECT_VERSIONS }    from './modules/versions'
 
 // Define parameters
 params.input_dir = "$projectDir/samplesheet_mpox_test.csv"
+params.fasta     = null
 
 // Define the main workflow
 workflow {
-    ARTIC()
-    run_name_ch = ARTIC.out.run_name
+    // --fasta switches to consensus mode (finished genomes, no ARTIC)
+    if (params.fasta) {
+        CONSENSUS()
+        run_name_ch = CONSENSUS.out.run_name
+    } else {
+        ARTIC()
+        run_name_ch = ARTIC.out.run_name
+    }
 
     // -------------------------------------------------------------------------
     // Capture tool versions for retrospective auditability

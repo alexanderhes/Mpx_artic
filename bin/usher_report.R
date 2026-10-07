@@ -35,14 +35,27 @@ message(paste("Found", length(tip_labels), "sequences in FASTA"))
 
 # ==============================================================================
 # 2. Build local sample metadata from samplesheet
-#    - Construct strain ID as {barcode}_{sample_id} to match FASTA headers
+#    - Construct strain ID as {barcode}_{sample_id} to match FASTA headers,
+#      or use the tip_label column when present (consensus mode)
 #    - Parse SampleDate (Norwegian DD.MM.YYYY format)
 # ==============================================================================
-samplesheet <- read_csv2(samplesheet_file, show_col_types = FALSE) %>%
+samplesheet_cols <- names(read_csv2(samplesheet_file, n_max = 0, show_col_types = FALSE))
+
+if ("tip_label" %in% samplesheet_cols) {
+  # Read as text so sample IDs keep leading zeros
+  samplesheet <- read_csv2(samplesheet_file, col_types = cols(.default = col_character())) %>%
+    mutate(strain = tip_label)
+} else {
+  samplesheet <- read_csv2(samplesheet_file, show_col_types = FALSE) %>%
+    mutate(
+      sample_id = as.character(sample_id),
+      barcode   = tolower(as.character(barcode)),
+      strain    = paste0(barcode, "_", sample_id)
+    )
+}
+
+samplesheet <- samplesheet %>%
   mutate(
-    sample_id = as.character(sample_id),
-    barcode   = tolower(as.character(barcode)),
-    strain    = paste0(barcode, "_", sample_id),
     date      = format(dmy(SampleDate), "%Y-%m-%d"),
     country   = "Norway",
     sample_type = "Project"
