@@ -146,6 +146,37 @@ A sequence quality classification is assigned based on genome coverage and linea
 
 ---
 
+## Consensus mode
+
+Consensus mode (`--fasta`, or `-m consensus` in the wrapper) takes finished genomes instead of raw reads. It skips steps 1–4 and 13 and runs:
+
+1. **Input preparation (`PREPARE_CONSENSUS`)** — validates the inputs, orients each genome to the reference and builds the combined FASTA
+2. **Nextclade** — as step 5
+3. **UShER placement and closest-neighbour report** — as steps 6–12
+4. **Final summary (`CONSENSUS_SUMMARY`)** — Nextclade and UShER results merged with the samplesheet
+
+### Input rules
+- One FASTA file per sample. The file name without extension is the sample ID and must equal **PrøveID** in the samplesheet (`.fasta`, `.fa`, `.fna`, optionally gzipped).
+- Original FASTA headers (e.g. SPAdes `NODE_1_length_...`) are ignored and replaced by the sample ID.
+- Each file must contain exactly one sequence. Multi-contig assemblies must be scaffolded/merged first.
+- Sample IDs must not contain whitespace or any of `: , ( ) ; ' [ ]`, since they become tip labels in the tree.
+- The samplesheet needs **PrøveID**, **RunName** (one value for the whole run) and **SampleDate** (DD.MM.YYYY). **barcode** is not required.
+
+The run stops before any analysis if a FASTA has no samplesheet row, a samplesheet row has no FASTA, an ID is duplicated, a file has more than one sequence, or a SampleDate is invalid. All problems are listed at once.
+
+### Orientation
+Assemblers may output the genome reverse-complemented relative to NC_063383. Each sequence is mapped to the reference with `minimap2 -x asm20`, and the aligned bases are summed per strand. Sequences mapping mainly to the minus strand are reverse-complemented. Summing by strand avoids being misled by the inverted terminal repeats, which align to both strands. A sequence that does not align to the reference stops the run.
+
+### Outputs
+Same folder layout as ARTIC mode, without `filtering/` and `minion/`:
+- `combined/{RunName}_combined_consensus.fasta` — prepared genomes, header = sample ID
+- `combined/{RunName}_samplesheet_consensus.csv` — samplesheet used downstream (with `tip_label`)
+- `combined/{RunName}_input_check.tsv` — per sample: source file, original header, length, % N, whether it was reverse-complemented
+- `nextclade_output/` and `usher/` — as in ARTIC mode
+- `{RunName}_final_results.csv` — samplesheet columns plus `Clade`, `Lineage`, `Coverage`, `QC_Status` (Nextclade overall QC), `Phylo_Distance`, `N_Tied_Neighbors`, `Neighbor_Countries`, `Neighbor_Date_Range`, `Species` and `Sequence quality` (same classification as step 13). Read and depth statistics are not available in this mode.
+
+---
+
 ## Output folder structure
 
 All results are written to `params.output_dir/{RunName}/`:

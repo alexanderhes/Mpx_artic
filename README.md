@@ -37,6 +37,32 @@ screen -S mpxv_artic-TEST -d -m bash /home/ngs/ngs_scripts/mpxv_artic/wrapper.sh
 * `-y, --year`
   Year of the sequencing run.
 
+* `-m, --mode`
+  `artic` (default) runs the full pipeline from raw FASTQ. `consensus` runs typing and phylogenetic placement on finished genomes (see below).
+
+### Consensus mode (finished genomes)
+Runs Nextclade typing and UShER placement in the global tree on genomes that are already assembled (e.g. SPAdes assemblies or genomes from other pipelines), skipping ARTIC.
+
+- One FASTA file per sample, with **file name = PrøveID** (e.g. `SAMPLE001.fasta`; `.fasta`, `.fa`, `.fna`, optionally `.gz`). Headers are ignored and replaced by the PrøveID.
+- Each file must contain exactly one sequence. Multi-contig assemblies must be scaffolded/merged first.
+- Sequences that are reverse-complemented relative to the reference are flipped automatically.
+- The run stops before analysis if a FASTA has no samplesheet row (or vice versa), an ID is duplicated, or SampleDate is not DD.MM.YYYY.
+
+With the wrapper:
+```
+screen -S mpxv_consensus-RUN -d -m bash /home/ngs/ngs_scripts/mpxv_artic/wrapper.sh \
+-r RUN \
+-a MPX \
+-y 2026 \
+-m consensus
+```
+Directly with Nextflow:
+```
+nextflow run alexanderhes/Mpx_artic -r main \
+    --fasta '/path/to/genomes/*.{fa,fasta,fna}' \
+    --input_dir /path/to/RUN_samplesheet.csv
+```
+
 ### Troubleshooting
 Check status file 
 ```
@@ -53,8 +79,8 @@ tail -f ~/mpx_wrapper_error.log
 The pipeline requires a `{RunName}_samplesheet.csv` as input which must be ";" separated (default separator when saving CSV files from Norwegian Excel versions).
 
 ### Required columns
-- **PrøveID** — Sample identification (e.g., `sample1`, `sample2`)
-- **barcode** — Sequencing barcode (e.g., `Barcode65`, `Barcode66`)
+- **PrøveID** — Sample identification (e.g., `sample1`, `sample2`). In consensus mode this must match the FASTA file name.
+- **barcode** — Sequencing barcode (e.g., `Barcode65`, `Barcode66`). Not required in consensus mode.
 - **RunName** — Name of the sequencing run (must match the pipeline run name, e.g., `TEST`, `MPX012`)
 - **SampleDate** — Collection date in DD.MM.YYYY format (e.g., `10.07.2022`) — **Required for phylogenetic analysis. Script will fail if missing.**
 
